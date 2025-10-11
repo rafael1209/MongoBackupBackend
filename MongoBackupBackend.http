@@ -1,0 +1,6 @@
+@MongoBackupBackend_HostAddress = http://localhost:5114
+
+GET {{MongoBackupBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
