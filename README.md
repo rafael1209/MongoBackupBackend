@@ -29,7 +29,7 @@ Example **appsettings.json**:
   "AllowedHosts": "*",
   "MongoDB": {
     "LocalConnectionString": "mongodb://user:pass@ip:port/",
-    "RemoteConnectionString": "mongodb://user:pass@ip:port/"
+    "RemoteConnectionStrings": "mongodb://user:pass@ip:port/|server2|server3|..."
   },
   "Settings": {
     "Time": "00:00:00" //server time zone
@@ -53,7 +53,7 @@ services:
       - "8080"
     environment:
       MongoDB:LocalConnectionString: "mongodb://mongodb:27017/"
-      MongoDB:RemoteConnectionString: "mongodb://user:pass@ip:port/"
+      MongoDB:RemoteConnectionStrings: "mongodb://user:pass@ip:port/|mongodb://user:pass@ip:port/|server3|..."
       Settings:Time: "03:00"
     networks:
       - app-network
