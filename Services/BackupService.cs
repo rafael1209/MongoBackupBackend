@@ -6,7 +6,7 @@ namespace MongoBackupBackend.Services
     public class BackupService(ILogger<BackupService> logger, IConfiguration config) : IBackupService
     {
         private readonly string _localUri = config["MongoDB:LocalConnectionString"]!;
-        private readonly List<string> _remoteUris = config.GetSection("MongoDB:RemoteConnectionStrings").Get<List<string>>() ?? [];
+        private readonly List<string> _remoteUris = config["MongoDB:RemoteConnectionStrings"]!.Split("|").ToList();
 
         public async Task<string> CreateBackupAsync()
         {
@@ -29,7 +29,7 @@ namespace MongoBackupBackend.Services
                     var remoteClient = new MongoClient(remoteUri);
                     var targetDb = remoteClient.GetDatabase(dbName);
 
-                    logger.LogInformation("Copying to {RemoteUri}", remoteUri);
+                    logger.LogInformation("Copying to {RemoteUri}", remoteClient);
 
                     foreach (var colName in colNames)
                     {
