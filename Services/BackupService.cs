@@ -3,62 +3,52 @@ using MongoDB.Driver;
 
 namespace MongoBackupBackend.Services
 {
-    public class BackupService : IBackupService
+    public class BackupService(ILogger<BackupService> logger, IConfiguration config) : IBackupService
     {
-        private readonly ILogger<BackupService> _logger;
-        private readonly IConfiguration _config;
-        private readonly string _localUri;
-        private readonly string _remoteUri;
-
-        public BackupService(ILogger<BackupService> logger, IConfiguration config)
-        {
-            _logger = logger;
-            _config = config;
-            _localUri = _config["MongoDB:LocalConnectionString"]!;
-            _remoteUri = _config["MongoDB:RemoteConnectionString"]!;
-        }
+        private readonly string _localUri = config["MongoDB:LocalConnectionString"]!;
+        private readonly List<string> _remoteUris = config.GetSection("MongoDB:RemoteConnectionStrings").Get<List<string>>() ?? [];
 
         public async Task<string> CreateBackupAsync()
         {
-            _logger.LogInformation("Starting MongoDB backup...");
+            logger.LogInformation("Starting MongoDB backup...");
 
             var localClient = new MongoClient(_localUri);
-            var remoteClient = new MongoClient(_remoteUri);
-
             var localDbList = await localClient.ListDatabaseNamesAsync();
             var databases = await localDbList.ToListAsync();
 
-            foreach (var dbName in databases)
+            foreach (var dbName in databases.Where(dbName => dbName is not ("admin" or "local" or "config")))
             {
-                if (dbName is "admin" or "local" or "config")
-                    continue;
+                logger.LogInformation("Backing up database: {DbName}", dbName);
 
                 var sourceDb = localClient.GetDatabase(dbName);
-                var targetDb = remoteClient.GetDatabase(dbName);
-
-                _logger.LogInformation("Backing up database: {DbName}", dbName);
-
                 var collections = await sourceDb.ListCollectionNamesAsync();
                 var colNames = await collections.ToListAsync();
 
-                foreach (var colName in colNames)
+                foreach (var remoteUri in _remoteUris)
                 {
-                    var sourceCollection = sourceDb.GetCollection<dynamic>(colName);
-                    var targetCollection = targetDb.GetCollection<dynamic>(colName);
+                    var remoteClient = new MongoClient(remoteUri);
+                    var targetDb = remoteClient.GetDatabase(dbName);
 
-                    _logger.LogInformation(" - Collection: {ColName}", colName);
+                    logger.LogInformation("Copying to {RemoteUri}", remoteUri);
 
-                    await targetCollection.DeleteManyAsync(FilterDefinition<dynamic>.Empty);
+                    foreach (var colName in colNames)
+                    {
+                        var sourceCollection = sourceDb.GetCollection<dynamic>(colName);
+                        var targetCollection = targetDb.GetCollection<dynamic>(colName);
 
-                    var docs = await sourceCollection.Find(FilterDefinition<dynamic>.Empty).ToListAsync();
-                    if (docs.Count > 0)
-                        await targetCollection.InsertManyAsync(docs);
+                        logger.LogInformation(" - Collection: {ColName}", colName);
+
+                        await targetCollection.DeleteManyAsync(FilterDefinition<dynamic>.Empty);
+
+                        var docs = await sourceCollection.Find(FilterDefinition<dynamic>.Empty).ToListAsync();
+                        if (docs.Count > 0)
+                            await targetCollection.InsertManyAsync(docs);
+                    }
                 }
             }
 
             var message = $"Backup completed successfully at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
-            _logger.LogInformation(message);
-
+            logger.LogInformation(message);
             return message;
         }
     }
