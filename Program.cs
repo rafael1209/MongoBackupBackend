@@ -1,23 +1,20 @@
-using Scalar.AspNetCore;
+namespace MongoBackupBackend;
 
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
+public class Program
 {
-    
+    public static void Main(string[] args)
+    {
+        CreateHostBuilder()
+            .Build()
+            .Run();
+    }
+
+    private static IHostBuilder CreateHostBuilder()
+    {
+        return Host.CreateDefaultBuilder()
+            .ConfigureWebHostDefaults(webHost =>
+            {
+                webHost.UseStartup<Startup>();
+            });
+    }
 }
-app.MapOpenApi();
-app.MapScalarApiReference();
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
