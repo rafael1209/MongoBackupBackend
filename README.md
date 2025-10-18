@@ -102,7 +102,7 @@ http://localhost:8080
 OpenAPI (Scalar UI) documentation is available at:
 
 ```
-http://localhost:8080/openapi
+http://localhost:8080/scalar/v1
 ```
 
 ---
